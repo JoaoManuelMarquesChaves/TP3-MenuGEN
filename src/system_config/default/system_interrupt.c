@@ -62,8 +62,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system/common/sys_common.h"
 #include "app.h"
 #include "system_definitions.h"
+#include "Mc32DriverLcd.h"
 #include<stdio.h>
-
+#include "GesPec12.h"
+#include "Generateur.h"
 // *****************************************************************************
 // *****************************************************************************
 // Section: System Interrupt Vector Functions
@@ -75,7 +77,6 @@ void __ISR(_TIMER_1_VECTOR, ipl3AUTO) IntHandlerDrvTmrInstance0(void)
 {
     static uint32_t Count = 0;
     static uint8_t Count2 = 0;
-    static uint8_t Count3 = 0;
     
     BSP_LEDToggle(BSP_LED_1);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_1);

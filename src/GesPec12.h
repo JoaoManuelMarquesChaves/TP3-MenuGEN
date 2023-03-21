@@ -111,5 +111,4 @@ void Pec12ClearESC   (void);
 void Pec12ClearInactivity   (void);
 //       S9ClearOK    annule indication action ok
 void S9ClearOK (void);
-
 #endif

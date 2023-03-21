@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 
+#define MAGIC 0x123455AA
 
 typedef enum  { SignalSinus, SignalTriangle, SignalDentDeScie, SignalCarre } E_FormesSignal;
 

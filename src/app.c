@@ -162,9 +162,9 @@ void APP_Tasks ( void )
             MENU_Initialize(&LocalParamGen);
             
             lcd_gotoxy(1,1);
-            printf_lcd("Tp3 GenSig 22-23");
+            printf_lcd("  Tp3 GenSig 22-23");
             lcd_gotoxy(1,2);
-            printf_lcd("Joao Marques");
+            printf_lcd("    Joao Marques");
 
             // Active les timers 
             DRV_TMR0_Start();

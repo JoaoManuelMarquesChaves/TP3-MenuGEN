@@ -10,6 +10,7 @@
 #include "Mc32NVMUtil.h"
 #include "Generateur.h"
 #include "DefMenuGen.h"
+#include "Mc32DriverLcd.h"
 #include "Mc32gestSpiDac.h"
 #include "driver/tmr/drv_tmr_static.h"
 #include <stdint.h>
@@ -18,37 +19,35 @@
 // T.P. 2016 100 echantillons
 
 
-uint16_t tb_Signal[MAX_ECH]={0};
+uint32_t tb_Signal[MAX_ECH]={0};
 
-
+S_Amplitude Ampli;
 // Initialisation du  générateur
 void  GENSIG_Initialize(S_ParamGen *pParam)
-{
-    //Lecture du bloc sauvegradé et met à jour la structure
-     
-    // Relecture des paramètres
-    NVM_ReadBlock((uint32_t*)pParam,14);
+{           
+    //Recuperation des datas sauvegardées au demarrage precedent
+    NVM_ReadBlock((uint32_t*) pParam , sizeof(S_ParamGen)); //Taille datas = taille structutre = 14 bytes
     
     //Test si match de la valeur Magic
-    if (pParam->Magic == 0x123455AA)
+    if (pParam->Magic == MAGIC)
     {
         //Garde automatiquement les valeurs precedentes sauvegardées
         lcd_gotoxy(1,4);
-        printf_lcd("Datas Restored");
+        printf_lcd("   Datas  Restored");
     }
     
     else
     {
         lcd_gotoxy(1,4);
-        printf_lcd("Datas Default");
+        printf_lcd("   Datas  Default");
         //Set les valeurs aux valeurs par defaut
-        pParam->Magic = 0x123455AA;
-        pParam->Amplitude = AMPLITUDE_INIT;
-        pParam->Forme = SignalDentDeScie;
-        pParam->Frequence = FREQ_INIT;
-        pParam->Offset = OFFSET_INIT;
+        pParam->Magic = MAGIC;
+        pParam->Amplitude = 10000;
+        pParam->Forme = 2;
+        pParam->Frequence = 100;
+        pParam->Offset = 5000;
     }
-}
+}//End of GENSIG_Initialize
   
 
 // Mise à jour de la periode d'échantillonage
@@ -66,68 +65,56 @@ void  GENSIG_UpdatePeriode(S_ParamGen *pParam)
 // Mise à jour du signal (forme, amplitude, offset)
 void  GENSIG_UpdateSignal(S_ParamGen *pParam)
 {
- 
-    //initialisation de l'incrément
-    int16_t i;
-    //initialiser la variable Sted
+    //intialisation de la variable statique offset
+    int16_t Offset;
+
+    int i;
+    uint16_t  Step;
+    //intitialiser la constatante de la pente
+    float const a = ((float)VAL_TIC_MAX/(float)10000)/(float)25;
+    float const b = pParam->Amplitude * 65536/10000 + VAL_TIC_MAX;
     
-    int16_t Amplitude = (pParam -> Amplitude * Max1) / 10000;
-    int16_t Offset = (pParam -> Offset * Max1) / 10000;
-    float pointValue = Max1 - Amplitude;
-    int32_t CalculOffset = 0;
+    Ampli.Nb_Tic = (pParam->Amplitude * VAL_TIC_MAX /10000);
+    Ampli.Min = ((VAL_TIC_MAX)-(Ampli.Nb_Tic));
+    Ampli.Max =((VAL_TIC_MAX)+(Ampli.Nb_Tic)-1);
+    
+    //gestion de l'offest
+    Offset = -((pParam->Offset*VAL_TIC_MAX)/10000);
             
- for(i=0; i<=MAX_ECH; i++)
+ for(i=0; i<MAX_ECH; i++)
     {   
     switch(pParam->Forme)
     {
         case SignalSinus:        
-                tb_Signal[i] = (Amplitude * sin(2 * M_PI * i/MAX_ECH) + 0.5) + Max1;
+                 tb_Signal[i] = (Ampli.Nb_Tic/1.28)*(4/M_PI * sin( M_PI *(3.6*i)/180)) + VAL_TIC_MAX + Offset;
             
         break;
-        case SignalTriangle:
-                tb_Signal[i] = pointValue + 0.5;
-                if(i < (MAX_ECH / 2))
-                {
-                    pointValue = pointValue + (Amplitude * 2 + 1) / (MAX_ECH/2.0);
-                }
-                else
-                {
-                    pointValue = pointValue - (Amplitude * 2 + 1) / (MAX_ECH/2.0);
-                }
+        case SignalTriangle:    
+                //calcul pour la pente montante du triangle (du centre Ã  la val max)
+                if (i < 25 )tb_Signal[i] = (pParam->Amplitude * (a * i)) + VAL_TIC_MAX + Offset;
+
+                //calcul pour la pente descendante du triangle (de la val max- la val min)
+                if ((i < 75) && (i >= 25))tb_Signal[i] = (pParam->Amplitude *( (-a) * i) )+ b + Offset;
+                
+                //calcul pour la pente montante du triangle (de la val min au centre)
+                if (i >= 75 )tb_Signal[i] = (pParam->Amplitude *( a * (i - 100)))+VAL_TIC_MAX + Offset ;
         break;
         case SignalDentDeScie:
-                tb_Signal[i] = pointValue + 0.5;
-                pointValue = pointValue + (Amplitude * 2 + 1) / (MAX_ECH-1) ;   
-            //tb_Signal[i] = (float)((float)Amplitude/(MAX_ECH-1))*i; 
+                Step = ((Ampli.Nb_Tic*2) / MAX_ECH);
+                tb_Signal[i] = ((Step * (MAX_ECH-i))+ Ampli.Min + Offset);
         break;
         case SignalCarre:
-            if(i < (MAX_ECH / 2))
+                if(i < 50 )
                 {
-                    // Assigner une valeur d'amplitude maximale pour la première moitié
-                    tb_Signal[i] = Amplitude + MAX;
+                    tb_Signal[i] = Ampli.Max  +Offset ;
                 }
                 else
                 {
-                    // Assigner une valeur d'amplitude négative pour la seconde moitié
-                    tb_Signal[i] = -Amplitude + MAX;
-                }
+                    tb_Signal[i] = Ampli.Min +Offset;
+                }   
             break;
     }
- }
-    for(i=0; i<MAX_ECH; i++)
-    {
-        CalculOffset = (int32_t)tb_Signal[i] - (int32_t)Offset;
-        if(CalculOffset > MAX)
-        {
-            CalculOffset = MAX;
-        }
-        else if(CalculOffset < 0)
-        {
-            CalculOffset = 0;
-        }
-        tb_Signal[i] = (uint16_t)CalculOffset;
-    }
-
+ }  
 }
 
 
@@ -139,8 +126,16 @@ void  GENSIG_Execute(void)
 {
    static uint16_t EchNb = 0;
    
-   SPI_WriteToDac(0,tb_Signal[EchNb] );      // sur canal 0
+   //Si la valeur max est dÃ©passer; saturation
+   if(tb_Signal[EchNb] >= (VAL_TIC_MAX*2)-1)tb_Signal[EchNb] = Ampli.Min;
+   //obtien la valeur max (65535) dans son tableau
+   if (tb_Signal[EchNb] < 0)tb_Signal[EchNb] = 0;
+   
+   //incrire la valeur de notre tableau dans le DAC sur le channel 0
+   SPI_WriteToDac(0, tb_Signal[EchNb]);
+   //incrÃ©menter EchNb 
    EchNb++;
+   //si EchNB est supperieur Ã  100  
    EchNb = EchNb % MAX_ECH;
    
 }

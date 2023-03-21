@@ -13,16 +13,21 @@
 #include "DefMenuGen.h"
 
 
-#define FREQ_INIT   20
-#define AMPLITUDE_INIT 10000
-#define OFFSET_INIT 0
 
 #define MAX_ECH 100
 #define f_sys  80000000 
 #define presceler 8
-#define Max1 32767 //2^15
+
 #define MAX 65535 //2^16
 
+#define VAL_TIC_MAX 32767
+
+typedef struct {
+            uint16_t Nb_Tic;
+            uint16_t Min;             // Amplitude min
+            uint16_t Max;             // Amplitude max  
+            
+} S_Amplitude;
 
 
 
