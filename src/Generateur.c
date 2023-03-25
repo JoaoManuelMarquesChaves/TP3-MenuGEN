@@ -18,7 +18,6 @@
 
 // T.P. 2016 100 echantillons
 
-
 uint32_t tb_Signal[MAX_ECH]={0};
 
 S_Amplitude Ampli;
@@ -107,7 +106,7 @@ void  GENSIG_UpdateSignal(S_ParamGen *pParam)
                     }   
                 break;
         }
-        //Si la valeur max est dépasser; saturation
+        //Control saturation
         if(pParam->Offset < 0 && tb_Signal[i] >= MAX)tb_Signal[i] =MAX;
         if(pParam->Offset > 0 && tb_Signal[i] >= MAX)tb_Signal[i] =0;
     } 
