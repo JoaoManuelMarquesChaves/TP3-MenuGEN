@@ -95,10 +95,7 @@ void ScanPec12 (bool ValA, bool ValB, bool ValPB)
             Pec12.Dec = 1;
         }
     }
-
-    
     // Traitement du PushButton
-    
     if(DebounceIsPressed(&DescrPB))
     {      
         Pec12.PressDuration++;
@@ -119,15 +116,13 @@ void ScanPec12 (bool ValA, bool ValB, bool ValPB)
             }
         }
     }
-
     // Gestion inactivité
-
     if (Pec12.InactivityDuration >= TMax) 
     {
         Pec12.NoActivity = 1;
         Pec12.InactivityDuration = 0;
-    }
-     
+    }  
+    // Gestion du bouton suplementaire pour la save
     if(S_OK == 0)
     {
         Pec12.InactivityDuration = 0;

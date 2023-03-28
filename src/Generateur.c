@@ -53,7 +53,6 @@ void  GENSIG_UpdatePeriode(S_ParamGen *pParam)
     //initaliser la variable
     uint16_t  Periode = 0;
     //---Calculer la période en fonction de la fréquence entrée comme paramètre----/   
-    //Periode = (float)f_sys/(float)(pParam -> Frequence * MAX_ECH * presceler) - 1;
     Periode = ((float)f_sys/((float)pParam -> Frequence * (float)MAX_ECH * (float)presceler))-1;
     //modifier la periode du timer 3
     PLIB_TMR_Period16BitSet(TMR_ID_3, Periode);
@@ -62,40 +61,48 @@ void  GENSIG_UpdatePeriode(S_ParamGen *pParam)
 // Mise à jour du signal (forme, amplitude, offset)
 void  GENSIG_UpdateSignal(S_ParamGen *pParam)
 {
-    //intialisation de la variable statique offset
+    //intialisation des variable
     int16_t Offset;
     uint16_t  Step;
     int i; 
-    //intitialiser la constatante de la pente  
+    //gestion de l'amplitude  
     Ampli.Nb_Tic = (float)pParam -> Amplitude *(float)3.2767;
     Ampli.Min = (VAL_TIC_MAX)-(Ampli.Nb_Tic);
     Ampli.Max =((VAL_TIC_MAX)+(Ampli.Nb_Tic))-1;
     
     //gestion de l'offest
-    Offset = -((float)pParam -> Offset * (float)3.2767);          
+    Offset = -((float)pParam -> Offset * (float)3.2767);   
+
+    //ecriture des 100 echantillions
     for(i=0; i<MAX_ECH; i++)
     {   
         switch(pParam->Forme)
         {
-            case SignalSinus:        
+            case SignalSinus:
+                    //calcul pour obtenir un sinus
                     tb_Signal[i] = ( (float)Ampli.Nb_Tic * sin(2 * M_PI * i/MAX_ECH) + 0.5) + VAL_TIC_MAX;            
                     break;
             case SignalTriangle:
+                    //déterminer la valeur de step
                     Step = ((float)Ampli.Nb_Tic*2)/50;
                     if(i <= 50)
-                    {
+                    {   //calcul pour avoir la premiere pente de mon triangle 
                         tb_Signal[i] = ((float)Step * (50-i))+ (float)Ampli.Min + (float)Offset;
                     }
                     else
                     {
+                        //calcul pour avoir la deuxieme pente de mon triangle 
                         tb_Signal[i] = ((float)Step * (i-50))+ (float)Ampli.Min  + (float)Offset;
                     }
             break;
             case SignalDentDeScie:
+                    //déterminer la valeur de step
                     Step = ((float)Ampli.Nb_Tic*2) / MAX_ECH;
+                    //calcul pour avoir une pente pour avoir une dent de cie
                     tb_Signal[i] = ((float)Step * (MAX_ECH-i))+ (float)Ampli.Min + (float)Offset;
             break;
             case SignalCarre:
+                    //calcul pour avoir mon carre
                     if(i <= 50 )
                     {
                         tb_Signal[i] = (float)Ampli.Min + (float)Offset ;
@@ -114,7 +121,6 @@ void  GENSIG_UpdateSignal(S_ParamGen *pParam)
 
 // Execution du générateur
 // Fonction appelée dans Int timer3 (cycle variable variable)
-// Version provisoire pour test du DAC à modifier
 void  GENSIG_Execute(void)
 {
    static uint16_t EchNb = 0;
